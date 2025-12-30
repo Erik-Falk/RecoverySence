@@ -11,8 +11,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.labc.data.model.RiskLevel
 import com.example.labc.data.model.TrainingDay
 import com.example.labc.ui.TrainingViewModel
+import androidx.compose.ui.graphics.Color
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+
 
 @Composable
 fun OverviewScreen(
@@ -20,36 +26,64 @@ fun OverviewScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
+    val context = LocalContext.current
+
+    // Filväljare för JSON
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importFromUri(uri)
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.loadData()
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        when {
-            state.isLoading -> {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    CircularProgressIndicator()
-                }
+        Column(modifier = Modifier.fillMaxSize()) {
+
+            // 🔹 Knapp för att välja Polar-JSON
+            Button(
+                onClick = {
+                    // Låt användaren välja JSON (och eventuellt text)
+                    filePickerLauncher.launch(arrayOf("application/json", "text/plain"))
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text("Importera Polar-pass (JSON)")
             }
 
-            state.errorMessage != null -> {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Text("Fel: ${state.errorMessage}")
+            when {
+                state.isLoading -> {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
-            }
 
-            else -> {
-                TrainingDayList(trainingDays = state.trainingDays)
+                state.errorMessage != null -> {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Text("Fel: ${state.errorMessage}")
+                    }
+                }
+
+                else -> {
+                    TrainingDayList(trainingDays = state.trainingDays)
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun TrainingDayList(trainingDays: List<TrainingDay>) {
@@ -59,18 +93,46 @@ fun TrainingDayList(trainingDays: List<TrainingDay>) {
             .padding(16.dp)
     ) {
         items(trainingDays) { day ->
+
+            // Text för risknivå
+            val riskText = when (day.riskLevel) {
+                RiskLevel.GREEN -> "Grön (stabil belastning)"
+                RiskLevel.YELLOW -> "Gul (ökad belastning)"
+                RiskLevel.RED -> "Röd (hög belastning)"
+                null -> "Okänd"
+            }
+
+            // Färg för risknivå
+            val riskColor = when (day.riskLevel) {
+                RiskLevel.GREEN -> Color(0xFF2E7D32)
+                RiskLevel.YELLOW -> Color(0xFFF9A825)
+                RiskLevel.RED -> Color(0xFFC62828)
+                null -> Color.Unspecified
+            }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Datum: ${day.date}", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = "Datum: ${day.date}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
                     Text(text = "Antal mätpunkter: ${day.samples.size}")
-                    Text(text = "Score: ${day.trainingScore ?: 0.0}")
-                    Text(text = "Risknivå: ${day.riskLevel ?: "okänd"}")
+                    Text(
+                        text = "Träningsscore: ${
+                            "%.1f".format(day.trainingScore ?: 0.0)
+                        }"
+                    )
+                    Text(
+                        text = "Risknivå: $riskText",
+                        color = riskColor
+                    )
                 }
             }
         }
     }
 }
+

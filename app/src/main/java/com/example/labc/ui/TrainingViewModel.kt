@@ -1,5 +1,6 @@
 package com.example.labc.ui
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.labc.data.TrainingRepository
@@ -25,7 +26,8 @@ class TrainingViewModel(
         viewModelScope.launch {
             try {
                 _uiState.value = TrainingUiState(isLoading = true)
-                val days = repository.loadTrainingDaysFromAssets()
+                repository.loadFromAssetsOnce() // om du vill ha demo
+                val days = repository.getAllTrainingDays()
                 _uiState.value = TrainingUiState(
                     isLoading = false,
                     trainingDays = days
@@ -34,6 +36,24 @@ class TrainingViewModel(
                 _uiState.value = TrainingUiState(
                     isLoading = false,
                     errorMessage = e.message
+                )
+            }
+        }
+    }
+
+    fun importFromUri(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                repository.importFromUri(uri)
+                // hämta uppdaterad lista
+                val days = repository.getAllTrainingDays()
+                _uiState.value = _uiState.value.copy(
+                    trainingDays = days,
+                    errorMessage = null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Kunde inte importera filen: ${e.message}"
                 )
             }
         }
