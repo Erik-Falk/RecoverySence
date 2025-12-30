@@ -1,34 +1,29 @@
 package com.example.labc.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.labc.data.model.RiskLevel
 import com.example.labc.data.model.TrainingDay
+import com.example.labc.ui.TrainingUiState
 import com.example.labc.ui.TrainingViewModel
-import androidx.compose.ui.graphics.Color
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.platform.LocalContext
-
 
 @Composable
-fun OverviewScreen(
-    viewModel: TrainingViewModel
+fun HomeScreen(
+    viewModel: TrainingViewModel,
+    state: TrainingUiState
 ) {
-    val state by viewModel.uiState.collectAsState()
-
-    val context = LocalContext.current
-
-    // Filväljare för JSON
+    // Filväljare för Polar JSON-filer
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -37,53 +32,47 @@ fun OverviewScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadData()
-    }
+    Column(modifier = Modifier.fillMaxSize()) {
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // Knapp för att importera pass
+        Button(
+            onClick = {
+                filePickerLauncher.launch(
+                    arrayOf("application/json", "text/plain")
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text("Importera Polar-pass (JSON)")
+        }
 
-            // 🔹 Knapp för att välja Polar-JSON
-            Button(
-                onClick = {
-                    // Låt användaren välja JSON (och eventuellt text)
-                    filePickerLauncher.launch(arrayOf("application/json", "text/plain"))
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text("Importera Polar-pass (JSON)")
+        when {
+            state.isLoading -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    CircularProgressIndicator()
+                }
             }
 
-            when {
-                state.isLoading -> {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        CircularProgressIndicator()
-                    }
+            state.errorMessage != null -> {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text("Fel: ${state.errorMessage}")
                 }
+            }
 
-                state.errorMessage != null -> {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Text("Fel: ${state.errorMessage}")
-                    }
-                }
-
-                else -> {
-                    TrainingDayList(trainingDays = state.trainingDays)
-                }
+            else -> {
+                TrainingDayList(trainingDays = state.trainingDays)
             }
         }
     }
 }
-
 
 @Composable
 fun TrainingDayList(trainingDays: List<TrainingDay>) {
@@ -104,9 +93,9 @@ fun TrainingDayList(trainingDays: List<TrainingDay>) {
 
             // Färg för risknivå
             val riskColor = when (day.riskLevel) {
-                RiskLevel.GREEN -> Color(0xFF2E7D32)
-                RiskLevel.YELLOW -> Color(0xFFF9A825)
-                RiskLevel.RED -> Color(0xFFC62828)
+                RiskLevel.GREEN -> Color(0xFF2E7D32) // grön
+                RiskLevel.YELLOW -> Color(0xFFF9A825) // gul
+                RiskLevel.RED -> Color(0xFFC62828) // röd
                 null -> Color.Unspecified
             }
 
@@ -135,4 +124,3 @@ fun TrainingDayList(trainingDays: List<TrainingDay>) {
         }
     }
 }
-
