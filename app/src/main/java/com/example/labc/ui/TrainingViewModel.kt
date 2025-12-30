@@ -1,5 +1,6 @@
 package com.example.labc.ui
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,7 +17,8 @@ data class TrainingUiState(
 )
 
 class TrainingViewModel(
-    private val repository: TrainingRepository
+    private val repository: TrainingRepository,
+    private val appContext: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TrainingUiState(isLoading = true))
@@ -26,7 +28,6 @@ class TrainingViewModel(
         viewModelScope.launch {
             try {
                 _uiState.value = TrainingUiState(isLoading = true)
-                repository.loadFromAssetsOnce() // om du vill ha demo
                 val days = repository.getAllTrainingDays()
                 _uiState.value = TrainingUiState(
                     isLoading = false,
@@ -44,8 +45,7 @@ class TrainingViewModel(
     fun importFromUri(uri: Uri) {
         viewModelScope.launch {
             try {
-                repository.importFromUri(uri)
-                // hämta uppdaterad lista
+                repository.importFromUri(uri, appContext)
                 val days = repository.getAllTrainingDays()
                 _uiState.value = _uiState.value.copy(
                     trainingDays = days,

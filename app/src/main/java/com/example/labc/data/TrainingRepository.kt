@@ -2,69 +2,59 @@ package com.example.labc.data
 
 import android.content.Context
 import android.net.Uri
+import com.example.labc.data.db.AppDatabase
+import com.example.labc.data.db.HeartRateSampleEntity
+import com.example.labc.data.db.TrainingDayWithSamples
+import com.example.labc.data.db.TrainingSessionEntity
 import com.example.labc.data.json.PolarJsonParser
 import com.example.labc.data.json.PolarWorkout
-import com.example.labc.data.parsers.PolarCsvParser
 import com.example.labc.data.model.HeartRateSample
 import com.example.labc.data.model.RiskLevel
 import com.example.labc.data.model.TrainingDay
 
 class TrainingRepository(
-    private val appContext: Context
+    appContext: Context
 ) {
-    // Enkel in-memory-lista för att "spara" pass under appens livslängd
-    private val storedDays = mutableListOf<TrainingDay>()
 
-    fun getAllTrainingDays(): List<TrainingDay> = storedDays.toList()
+    private val db = AppDatabase.getInstance(appContext)
+    private val dao = db.trainingDao()
 
-    // Anropas från ViewModel när användaren väljer en CSV-fil
-    fun importFromUri(uri: Uri) {
+    // Hämta allt från DB och mappa till dina domänklasser
+    suspend fun getAllTrainingDays(): List<TrainingDay> {
+        val fromDb: List<TrainingDayWithSamples> = dao.getAllSessionsWithSamples()
+        return fromDb.map { it.toDomain() }
+    }
+
+    // Importera Polar JSON-fil -> spara i DB
+    suspend fun importFromUri(uri: Uri, appContext: Context) {
         val inputStream = appContext.contentResolver.openInputStream(uri)
             ?: throw IllegalArgumentException("Kunde inte öppna filen")
 
         val json = inputStream.bufferedReader().use { it.readText() }
 
-        // 🔹 Använd vår nya JSON-parser
         val workout: PolarWorkout = PolarJsonParser.parse(json)
 
         val score = calculateTrainingScore(workout.samples)
         val risk = calculateRiskLevel(score)
 
-        val newDay = TrainingDay(
-            date = workout.date,           // t.ex. "2024-11-16"
-            samples = workout.samples,
+        val sessionEntity = TrainingSessionEntity(
+            date = workout.date,
             trainingScore = score,
-            riskLevel = risk
+            riskLevel = risk.name // "GREEN", "YELLOW", "RED"
         )
 
-        storedDays.add(newDay)
-    }
-
-    // Exempel: läs ett demo-pass från assets (frivilligt)
-    fun loadFromAssetsOnce() {
-        if (storedDays.isNotEmpty()) return
-
-        try {
-            val assetManager = appContext.assets
-            val inputStream = assetManager.open("polar_example.csv")
-            val lines = inputStream.bufferedReader().use { it.readLines() }
-
-            val samples = PolarCsvParser.parse(lines)
-            val score = calculateTrainingScore(samples)
-            val risk = calculateRiskLevel(score)
-
-            storedDays.add(
-                TrainingDay(
-                    date = "Demo (assets)",
-                    samples = samples,
-                    trainingScore = score,
-                    riskLevel = risk
-                )
+        val sampleEntities = workout.samples.map { s ->
+            HeartRateSampleEntity(
+                sessionId = 0, // sätts i DAO
+                timestamp = s.timestamp,
+                heartRate = s.heartRate
             )
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
+
+        dao.insertSessionWithSamples(sessionEntity, sampleEntities)
     }
+
+    // ---- analys-metoder som du redan använder ----
 
     private fun calculateTrainingScore(samples: List<HeartRateSample>): Double {
         if (samples.isEmpty()) return 0.0
@@ -87,4 +77,29 @@ class TrainingRepository(
             else -> RiskLevel.RED
         }
     }
+}
+
+// ---- Mapping från DB-modeller till dina domänklasser ----
+
+private fun TrainingDayWithSamples.toDomain(): TrainingDay {
+    val risk = when (session.riskLevel) {
+        "GREEN" -> RiskLevel.GREEN
+        "YELLOW" -> RiskLevel.YELLOW
+        "RED" -> RiskLevel.RED
+        else -> null
+    }
+
+    val samplesDomain = samples.map {
+        HeartRateSample(
+            timestamp = it.timestamp,
+            heartRate = it.heartRate
+        )
+    }
+
+    return TrainingDay(
+        date = session.date,
+        samples = samplesDomain,
+        trainingScore = session.trainingScore,
+        riskLevel = risk
+    )
 }
