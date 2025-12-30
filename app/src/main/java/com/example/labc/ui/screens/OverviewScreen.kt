@@ -11,8 +11,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.labc.data.model.RiskLevel
 import com.example.labc.data.model.TrainingDay
 import com.example.labc.ui.TrainingViewModel
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun OverviewScreen(
@@ -59,18 +61,46 @@ fun TrainingDayList(trainingDays: List<TrainingDay>) {
             .padding(16.dp)
     ) {
         items(trainingDays) { day ->
+
+            // Text för risknivå
+            val riskText = when (day.riskLevel) {
+                RiskLevel.GREEN -> "Grön (stabil belastning)"
+                RiskLevel.YELLOW -> "Gul (ökad belastning)"
+                RiskLevel.RED -> "Röd (hög belastning)"
+                null -> "Okänd"
+            }
+
+            // Färg för risknivå
+            val riskColor = when (day.riskLevel) {
+                RiskLevel.GREEN -> Color(0xFF2E7D32)
+                RiskLevel.YELLOW -> Color(0xFFF9A825)
+                RiskLevel.RED -> Color(0xFFC62828)
+                null -> Color.Unspecified
+            }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Datum: ${day.date}", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = "Datum: ${day.date}",
+                        style = MaterialTheme.typography.titleMedium
+                    )
                     Text(text = "Antal mätpunkter: ${day.samples.size}")
-                    Text(text = "Score: ${day.trainingScore ?: 0.0}")
-                    Text(text = "Risknivå: ${day.riskLevel ?: "okänd"}")
+                    Text(
+                        text = "Träningsscore: ${
+                            "%.1f".format(day.trainingScore ?: 0.0)
+                        }"
+                    )
+                    Text(
+                        text = "Risknivå: $riskText",
+                        color = riskColor
+                    )
                 }
             }
         }
     }
 }
+
