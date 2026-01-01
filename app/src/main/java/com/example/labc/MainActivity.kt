@@ -8,7 +8,7 @@ import com.example.labc.data.TrainingRepository
 import com.example.labc.ui.screens.RecoverySenseApp
 import com.example.labc.ui.TrainingViewModel
 import com.example.labc.TrainingViewModelFactory
-import com.example.labc.ui.theme.LabCTheme   // byt till ditt riktiga tema om det heter något annat
+import com.example.labc.ui.theme.LabCTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,8 +21,6 @@ class MainActivity : ComponentActivity() {
                 val vm: TrainingViewModel = viewModel(
                     factory = TrainingViewModelFactory(repository, applicationContext)
                 )
-
-                // ⬇️ Ny “root” som innehåller Home/Graph/Recommendation
                 RecoverySenseApp(viewModel = vm)
             }
         }

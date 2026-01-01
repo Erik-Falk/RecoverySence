@@ -2,10 +2,15 @@ package com.example.labc.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Basfärger för dark theme
+val DarkBackground = Color(0xFF050509)      // nästan svart
+val DarkSurface = Color(0xFF111318)         // mörk grå/blå
+val DarkSurfaceVariant = Color(0xFF1E2128)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val AccentPink = Color(0xFFFF4D6A)          // lik Apple Health-grafen
+val AccentPinkLight = Color(0xFFFF7A8F)
+
+val TextPrimary = Color(0xFFF5F5F7)         // ljus text
+val TextSecondary = Color(0xFFB0B3C1)
+
+val ChartGrid = Color(0xFF2A2E39)
