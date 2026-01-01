@@ -75,5 +75,6 @@ dependencies {
 
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
+    implementation("androidx.compose.material:material-icons-extended")
     kapt("androidx.room:room-compiler:$roomVersion")
 }
