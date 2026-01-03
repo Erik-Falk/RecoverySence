@@ -6,4 +6,6 @@ sealed class Screen {
     object Import : Screen()
     object Graph : Screen()
     object Recommendation : Screen()
+
+    object Live : Screen()
 }

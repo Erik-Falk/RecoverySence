@@ -1,26 +1,28 @@
 package com.example.labc.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import kotlinx.coroutines.launch
-import com.example.labc.ui.TrainingViewModel
-import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.filled.Menu
+import com.example.labc.ui.TrainingViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecoverySenseApp(viewModel: TrainingViewModel) {
 
-    // Default screen = Home
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
 
-    // Load data once
     LaunchedEffect(Unit) { viewModel.loadData() }
 
     val state by viewModel.uiState.collectAsState()
+    val liveHr by viewModel.liveHeartRate.collectAsState()
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -28,6 +30,26 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
     fun navigate(screen: Screen) {
         currentScreen = screen
         scope.launch { drawerState.close() }
+    }
+
+    // BLE-permission-launcher (som innan)
+    val blePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val allGranted = perms.values.all { it }
+        if (allGranted) {
+            viewModel.startLiveHeartRate()
+        }
+    }
+
+    fun startLiveWithPermissions() {
+        blePermissionLauncher.launch(
+            arrayOf(
+                android.Manifest.permission.BLUETOOTH_SCAN,
+                android.Manifest.permission.BLUETOOTH_CONNECT,
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        )
     }
 
     ModalNavigationDrawer(
@@ -56,9 +78,14 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
                     onClick = { navigate(Screen.Graph) }
                 )
                 NavigationDrawerItem(
-                    label = { Text("Rekommend") },
+                    label = { Text("Rekommendation") },
                     selected = currentScreen is Screen.Recommendation,
                     onClick = { navigate(Screen.Recommendation) }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Livepuls") },
+                    selected = currentScreen is Screen.Live,
+                    onClick = { navigate(Screen.Live) }
                 )
             }
         }
@@ -72,14 +99,15 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
                                 is Screen.Home -> "Hem"
                                 is Screen.Import -> "Import"
                                 is Screen.Graph -> "Grafer"
-                                is Screen.Recommendation -> "Rekommend"
+                                is Screen.Recommendation -> "Rekommendation"
+                                is Screen.Live -> "Livepuls"
                             }
                         )
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Menu,
+                                imageVector = Icons.Default.Menu,
                                 contentDescription = "Meny"
                             )
                         }
@@ -91,14 +119,30 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
                 when (currentScreen) {
                     is Screen.Home -> HomeScreen(
                         state = state,
-                        onGoToImport = { currentScreen = Screen.Import },
-                        onGoToGraph = { currentScreen = Screen.Graph },
-                        onGoToRecommendation = { currentScreen = Screen.Recommendation }
+                        onGoToImport = { navigate(Screen.Import) },
+                        onGoToGraph = { navigate(Screen.Graph) },
+                        onGoToRecommendation = { navigate(Screen.Recommendation) },
+                        onGoToLive = { navigate(Screen.Live) }
                     )
 
-                    is Screen.Import -> ImportScreen(viewModel = viewModel, state = state)
-                    is Screen.Graph -> GraphScreen(trainingDays = state.trainingDays)
-                    is Screen.Recommendation -> RecommendationScreen(trainingDays = state.trainingDays)
+                    is Screen.Import -> ImportScreen(
+                        viewModel = viewModel,
+                        state = state
+                    )
+
+                    is Screen.Graph -> GraphScreen(
+                        trainingDays = state.trainingDays
+                    )
+
+                    is Screen.Recommendation -> RecommendationScreen(
+                        trainingDays = state.trainingDays
+                    )
+
+                    is Screen.Live -> LiveHeartRateScreen(
+                        liveHeartRate = liveHr,
+                        onStartLive = { startLiveWithPermissions() },
+                        onStopLive = { viewModel.stopLiveHeartRate() }
+                    )
                 }
             }
         }

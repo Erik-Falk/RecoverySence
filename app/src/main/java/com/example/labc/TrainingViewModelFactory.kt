@@ -10,12 +10,11 @@ class TrainingViewModelFactory(
     private val repository: TrainingRepository,
     private val appContext: Context
 ) : ViewModelProvider.Factory {
-
-    @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TrainingViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
             return TrainingViewModel(repository, appContext) as T
         }
-        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

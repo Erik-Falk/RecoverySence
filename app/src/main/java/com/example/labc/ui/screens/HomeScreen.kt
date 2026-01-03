@@ -1,24 +1,28 @@
 package com.example.labc.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.labc.ui.TrainingUiState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.Alignment
 
 @Composable
 fun HomeScreen(
     state: TrainingUiState,
     onGoToImport: () -> Unit,
     onGoToGraph: () -> Unit,
-    onGoToRecommendation: () -> Unit
+    onGoToRecommendation: () -> Unit,
+    onGoToLive: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -28,24 +32,26 @@ fun HomeScreen(
         Text("Hem", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(12.dp))
 
-        // Small “status” card (optional)
-        val latest = state.trainingDays.maxByOrNull { it.date }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Senaste passet", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(6.dp))
-                if (latest == null) {
-                    Text("Inga importerade pass ännu.")
-                } else {
-                    Text("Datum: ${latest.date}")
-                    Text("Träningsscore: ${"%.1f".format(latest.trainingScore ?: 0.0)}")
-                }
-            }
+        if (state.isLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
         }
 
-        Spacer(Modifier.height(16.dp))
+        state.errorMessage?.let {
+            Text("Fel: $it", color = MaterialTheme.colorScheme.error)
+            Spacer(Modifier.height(12.dp))
+        }
 
-        // Overview “bars”
+        // 🔹 Livepuls
+        HomeActionButton(
+            title = "Livepuls",
+            subtitle = "Se puls i realtid från din sensor",
+            icon = Icons.Default.Favorite,
+            onClick = onGoToLive
+        )
+
+        Spacer(Modifier.height(12.dp))
+
         HomeActionButton(
             title = "Import",
             subtitle = "Importera Polar-pass (JSON) och se alla dagar",
@@ -65,21 +71,11 @@ fun HomeScreen(
         Spacer(Modifier.height(12.dp))
 
         HomeActionButton(
-            title = "Rekommend",
+            title = "Rekommendation",
             subtitle = "Få träningsförslag baserat på belastning",
             icon = Icons.Default.Lightbulb,
             onClick = onGoToRecommendation
         )
-
-        if (state.isLoading) {
-            Spacer(Modifier.height(16.dp))
-            CircularProgressIndicator()
-        }
-
-        state.errorMessage?.let {
-            Spacer(Modifier.height(12.dp))
-            Text("Fel: $it")
-        }
     }
 }
 
