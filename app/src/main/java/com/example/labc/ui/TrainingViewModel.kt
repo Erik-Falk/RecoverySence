@@ -6,8 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.labc.ble.BleHeartRateManager
 import com.example.labc.data.TrainingRepository
-import com.example.labc.data.model.TrainingDay
 import com.example.labc.data.model.HeartRateSample
+import com.example.labc.data.model.TrainingDay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,21 +24,28 @@ class TrainingViewModel(
     private val appContext: Context
 ) : ViewModel() {
 
+    // BLE-manager
     private val bleManager = BleHeartRateManager(appContext)
 
+    // Exponera BLE-status till UI
+    val bleConnectionState = bleManager.connectionState
+    val bleConnectionInfo = bleManager.connectionInfo
+
+    // Exponera livepuls till UI
+    val liveHeartRate: StateFlow<Int?> = bleManager.heartRate
+
+    // UI-state för resten av appen (alla pass)
     private val _uiState = MutableStateFlow(TrainingUiState(isLoading = true))
     val uiState: StateFlow<TrainingUiState> = _uiState.asStateFlow()
 
-    // Live puls till UI
-    val liveHeartRate: StateFlow<Int?> = bleManager.heartRate
-
     // --- Livepass-inspelning ---
+
     private val liveSessionSamples = mutableListOf<HeartRateSample>()
     private var liveSessionStartTime: Long? = null
     private var isRecordingLiveSession: Boolean = false
 
     init {
-        // Lyssna på liveHeartRate och samla samples när vi spelar in
+        // Lyssna på liveHeartRate och spara samples när vi spelar in
         viewModelScope.launch {
             liveHeartRate.collect { hr ->
                 if (hr != null && isRecordingLiveSession) {
@@ -55,6 +62,7 @@ class TrainingViewModel(
     }
 
     // --- Ladda alla pass från DB ---
+
     fun loadData() {
         viewModelScope.launch {
             try {
@@ -73,7 +81,8 @@ class TrainingViewModel(
         }
     }
 
-    // --- Import från fil (JSON) ---
+    // --- Import från fil (Polar JSON) ---
+
     fun importFromUri(uri: Uri) {
         viewModelScope.launch {
             try {
@@ -92,7 +101,10 @@ class TrainingViewModel(
     }
 
     // --- Livepass: starta inspelning + BLE ---
+
     fun startLiveSession() {
+        android.util.Log.d("BleHR", "ViewModel.startLiveSession() called")
+
         liveSessionSamples.clear()
         liveSessionStartTime = System.currentTimeMillis()
         isRecordingLiveSession = true
@@ -100,7 +112,8 @@ class TrainingViewModel(
         bleManager.startScan()
     }
 
-    // --- Livepass: stoppa och spara som TrainingDay ---
+    // --- Livepass: stoppa och spara som träningspass ---
+
     fun stopLiveSessionAndSave() {
         isRecordingLiveSession = false
         bleManager.disconnect()
@@ -137,8 +150,11 @@ class TrainingViewModel(
         }
     }
 
-    // Om du redan använder dessa i UI kan du mappa dem:
-    fun startLiveHeartRate() = startLiveSession()
+    // “Bekväma” alias som du använder i UI
+    fun startLiveHeartRate() {
+        android.util.Log.d("BleHR", "ViewModel.startLiveHeartRate() alias called")
+        startLiveSession()
+    }
     fun stopLiveHeartRate() = stopLiveSessionAndSave()
 
     override fun onCleared() {

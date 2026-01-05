@@ -2,8 +2,6 @@ package com.example.labc.data.parsers
 
 import com.example.labc.data.model.HeartRateSample
 
-//TODO: Skriv om filen så den passar polars CSV. Just nu är ett exempel
-
 object PolarCsvParser {
 
     fun parse(lines: List<String>): List<HeartRateSample> {
@@ -31,7 +29,6 @@ object PolarCsvParser {
     }
 
     private fun parseTimeToMillis(timeStr: String): Long {
-        // TODO: anpassa efter hur tiden ser ut i din riktiga Polar-CSV
         // T.ex. om det är sekunder från start:
         return timeStr.toLongOrNull()?.times(1000L) ?: 0L
     }

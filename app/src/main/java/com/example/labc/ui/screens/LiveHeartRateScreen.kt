@@ -5,84 +5,101 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.labc.ble.BleConnectionState
 
 @Composable
 fun LiveHeartRateScreen(
     liveHeartRate: Int?,
+    connectionState: BleConnectionState,
+    connectionInfo: String,
     onStartLive: () -> Unit,
     onStopLive: () -> Unit
 ) {
-    val colors = MaterialTheme.colorScheme
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
-        Text(
-            text = "Livepuls",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        // Stor pulsvy
+        // Connection-status
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
             colors = CardDefaults.cardColors(
-                containerColor = colors.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                    .padding(16.dp)
             ) {
                 Text(
-                    text = liveHeartRate?.let { "$it" } ?: "--",
-                    fontSize = 64.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.primary
+                    text = "Anslutning",
+                    style = MaterialTheme.typography.titleMedium
                 )
+                Spacer(Modifier.height(8.dp))
+
                 Text(
-                    text = "bpm",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.onSurfaceVariant
+                    text = "Status: ${connectionState.name}",
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                Spacer(Modifier.height(12.dp))
+
+                Spacer(Modifier.height(4.dp))
+
                 Text(
-                    text = if (liveHeartRate == null)
-                        "Tryck på Starta för att koppla upp mot sensorn."
-                    else
-                        "Pulsvärde från ansluten sensor.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant
+                    text = connectionInfo,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        // Start / Stop-knappar
+        // Livepuls
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Livepuls",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = liveHeartRate?.let { "$it bpm" } ?: "--",
+                    style = MaterialTheme.typography.displaySmall
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                onClick = onStartLive,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    android.util.Log.d("BleHR", "Start-knapp tryckt i LiveHeartRateScreen")
+                    onStartLive()
+                }
             ) {
                 Text("Starta")
             }
+
             OutlinedButton(
-                onClick = onStopLive,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    android.util.Log.d("BleHR", "Stop-knapp tryckt i LiveHeartRateScreen")
+                    onStopLive()
+                }
             ) {
                 Text("Stoppa")
             }

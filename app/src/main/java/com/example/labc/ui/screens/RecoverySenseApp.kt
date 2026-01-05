@@ -1,5 +1,6 @@
 package com.example.labc.ui.screens
 
+import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -13,16 +14,21 @@ import androidx.compose.ui.unit.dp
 import com.example.labc.ui.TrainingViewModel
 import kotlinx.coroutines.launch
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecoverySenseApp(viewModel: TrainingViewModel) {
 
+    // vilken skärm som visas
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
 
+    // ladda pass vid start
     LaunchedEffect(Unit) { viewModel.loadData() }
 
     val state by viewModel.uiState.collectAsState()
     val liveHr by viewModel.liveHeartRate.collectAsState()
+    val connState by viewModel.bleConnectionState.collectAsState()
+    val connInfo by viewModel.bleConnectionInfo.collectAsState()
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -32,22 +38,26 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
         scope.launch { drawerState.close() }
     }
 
-    // BLE-permission-launcher (som innan)
+    // ---- BLE permissions ----
     val blePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { perms ->
+        android.util.Log.d("BleHR", "Permission callback: $perms")
         val allGranted = perms.values.all { it }
         if (allGranted) {
+            android.util.Log.d("BleHR", "Alla BLE-permissioner godkända – startar live")
             viewModel.startLiveHeartRate()
+        } else {
+            android.util.Log.d("BleHR", "Permission nekad, startar INTE scan")
         }
     }
 
     fun startLiveWithPermissions() {
         blePermissionLauncher.launch(
             arrayOf(
-                android.Manifest.permission.BLUETOOTH_SCAN,
-                android.Manifest.permission.BLUETOOTH_CONNECT,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION
             )
         )
     }
@@ -140,6 +150,8 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
 
                     is Screen.Live -> LiveHeartRateScreen(
                         liveHeartRate = liveHr,
+                        connectionState = connState,
+                        connectionInfo = connInfo,
                         onStartLive = { startLiveWithPermissions() },
                         onStopLive = { viewModel.stopLiveHeartRate() }
                     )
