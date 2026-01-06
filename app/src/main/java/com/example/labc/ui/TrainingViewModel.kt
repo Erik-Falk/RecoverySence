@@ -109,7 +109,7 @@ class TrainingViewModel(
         liveSessionStartTime = System.currentTimeMillis()
         isRecordingLiveSession = true
 
-        bleManager.startScan()
+        bleManager.connectDirect("A0:9E:1A:C4:45:8C")
     }
 
     // --- Livepass: stoppa och spara som träningspass ---

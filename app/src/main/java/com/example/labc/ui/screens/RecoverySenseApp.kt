@@ -1,6 +1,8 @@
 package com.example.labc.ui.screens
 
 import android.Manifest
+import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -42,24 +44,34 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
     val blePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { perms ->
-        android.util.Log.d("BleHR", "Permission callback: $perms")
-        val allGranted = perms.values.all { it }
-        if (allGranted) {
-            android.util.Log.d("BleHR", "Alla BLE-permissioner godkända – startar live")
+        Log.d("BleHR", "Permission callback: $perms")
+
+        val canScan =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                perms[Manifest.permission.BLUETOOTH_SCAN] == true &&
+                        perms[Manifest.permission.BLUETOOTH_CONNECT] == true
+            } else {
+                perms[Manifest.permission.ACCESS_FINE_LOCATION] == true
+            }
+
+        if (canScan) {
+            Log.d("BleHR", "Rätt BLE-permissioner – startar scan")
             viewModel.startLiveHeartRate()
         } else {
-            android.util.Log.d("BleHR", "Permission nekad, startar INTE scan")
+            Log.d("BleHR", "Permission nekad, startar INTE scan")
         }
     }
 
     fun startLiveWithPermissions() {
-        blePermissionLauncher.launch(
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.BLUETOOTH_CONNECT
             )
-        )
+        } else {
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        blePermissionLauncher.launch(permissions)
     }
 
     ModalNavigationDrawer(
