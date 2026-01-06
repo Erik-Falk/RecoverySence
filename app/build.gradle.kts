@@ -9,12 +9,10 @@ android {
     namespace = "com.example.labc"
     compileSdk = 36
 
-    // Använd gärna samma compile/target som projektet skapades med.
-    // Om du får fel om API 36 saknas, byt till 34.
 
     defaultConfig {
         applicationId = "com.example.labc"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -77,4 +75,13 @@ dependencies {
     implementation("androidx.room:room-ktx:$roomVersion")
     implementation("androidx.compose.material:material-icons-extended")
     kapt("androidx.room:room-compiler:$roomVersion")
+
+    implementation("com.github.polarofficial:polar-ble-sdk:6.12.0") // eller senaste från JitPack
+    implementation("io.reactivex.rxjava3:rxjava:3.1.6")
+    implementation("io.reactivex.rxjava3:rxandroid:3.0.2")
+
+    // Polar SDK behöver RxJava3 / RxAndroid
+    implementation("io.reactivex.rxjava3:rxjava:3.1.8")
+    implementation("io.reactivex.rxjava3:rxandroid:3.0.2")
+
 }

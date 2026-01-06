@@ -160,6 +160,6 @@ class TrainingViewModel(
     override fun onCleared() {
         super.onCleared()
         isRecordingLiveSession = false
-        bleManager.disconnect()
+        bleManager.shutdown()
     }
 }
