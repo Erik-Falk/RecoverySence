@@ -13,7 +13,7 @@ fun LiveHeartRateScreen(
     liveHeartRate: Int?,
     connectionState: BleConnectionState,
     connectionInfo: String,
-    onStartLive: (String?) -> Unit,
+    onStartLive: (String?) -> Unit,   // <-- tar MAC eller null
     onStopLive: () -> Unit
 ) {
     var macText by remember { mutableStateOf("") }
@@ -31,22 +31,12 @@ fun LiveHeartRateScreen(
             )
         ) {
             Column(
-                modifier = Modifier
-                    .padding(16.dp)
+                modifier = Modifier.padding(16.dp)
             ) {
-                Text(
-                    text = "Anslutning",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text("Anslutning", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
-
-                Text(
-                    text = "Status: ${connectionState.name}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
+                Text("Status: ${connectionState.name}")
                 Spacer(Modifier.height(4.dp))
-
                 Text(
                     text = connectionInfo,
                     style = MaterialTheme.typography.bodySmall,
@@ -68,10 +58,7 @@ fun LiveHeartRateScreen(
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Livepuls",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text("Livepuls", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = liveHeartRate?.let { "$it bpm" } ?: "--",
@@ -80,22 +67,15 @@ fun LiveHeartRateScreen(
             }
         }
 
-        // Fält för MAC-adress
+        // MAC-fält
         OutlinedTextField(
             value = macText,
             onValueChange = { macText = it },
-            label = { Text("MAC-adress (valfritt)") },
+            label = { Text("MAC-adress (valfri)") },
             placeholder = { Text("t.ex. A0:9E:1A:C4:45:8C") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        Text(
-            text = "Lämna tomt för att söka efter närmaste Polar-sensor.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(Modifier.height(8.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -105,8 +85,8 @@ fun LiveHeartRateScreen(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     android.util.Log.d("BleHR", "Start-knapp tryckt i LiveHeartRateScreen")
-                    val macOrNull = macText.trim().ifBlank { null }
-                    onStartLive(macOrNull)
+                    val mac = macText.trim().takeIf { it.isNotEmpty() }
+                    onStartLive(mac)
                 }
             ) {
                 Text("Starta")

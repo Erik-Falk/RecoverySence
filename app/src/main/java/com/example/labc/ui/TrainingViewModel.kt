@@ -28,7 +28,6 @@ class TrainingViewModel(
 
     val bleConnectionState = bleManager.connectionState
     val bleConnectionInfo = bleManager.connectionInfo
-
     val liveHeartRate: StateFlow<Int?> = bleManager.heartRate
 
     private val _uiState = MutableStateFlow(TrainingUiState(isLoading = true))
@@ -42,12 +41,9 @@ class TrainingViewModel(
         viewModelScope.launch {
             liveHeartRate.collect { hr ->
                 if (hr != null && isRecordingLiveSession) {
-                    val timestamp = System.currentTimeMillis()
+                    val ts = System.currentTimeMillis()
                     liveSessionSamples.add(
-                        HeartRateSample(
-                            timestamp = timestamp,
-                            heartRate = hr
-                        )
+                        HeartRateSample(timestamp = ts, heartRate = hr)
                     )
                 }
             }
@@ -89,7 +85,7 @@ class TrainingViewModel(
         }
     }
 
-    // --- Livepass: starta inspelning + BLE ---
+    // --- Livepass: start + stop ---
 
     fun startLiveSession(targetMac: String?) {
         android.util.Log.d("BleHR", "ViewModel.startLiveSession(targetMac=$targetMac)")
@@ -137,9 +133,9 @@ class TrainingViewModel(
         }
     }
 
-    fun startLiveHeartRate(mac: String?) {
-        android.util.Log.d("BleHR", "ViewModel.startLiveHeartRate(mac=$mac) alias called")
-        startLiveSession(mac)
+    fun startLiveHeartRate(targetMac: String?) {
+        android.util.Log.d("BleHR", "ViewModel.startLiveHeartRate(mac=$targetMac)")
+        startLiveSession(targetMac)
     }
 
     fun stopLiveHeartRate() = stopLiveSessionAndSave()
