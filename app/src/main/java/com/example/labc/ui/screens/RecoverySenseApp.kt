@@ -37,13 +37,13 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
         scope.launch { drawerState.close() }
     }
 
-    // MAC som användaren vill använda nästa gång vi startar
-    val pendingMac = remember { mutableStateOf<String?>(null) }
+    // ---- BLE permissions + "pending" MAC ----
+    var pendingMac by remember { mutableStateOf<String?>(null) }
 
     val blePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { perms ->
-        android.util.Log.d("BleHR", "Permission callback: $perms")
+        Log.d("BleHR", "Permission callback: $perms")
 
         val canScan =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -54,30 +54,64 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
             }
 
         if (canScan) {
-            android.util.Log.d("BleHR", "Rätt BLE-permissioner – startar scan (mac=${pendingMac.value})")
-            viewModel.startLiveHeartRate(pendingMac.value)
+            Log.d("BleHR", "Rätt BLE-permissioner – startar scan (mac=$pendingMac)")
+            viewModel.startLiveHeartRate(pendingMac)
         } else {
-            android.util.Log.d("BleHR", "Permission nekad, startar INTE scan")
+            Log.d("BleHR", "Permission nekad, startar INTE scan")
         }
     }
 
     fun startLiveWithPermissions(targetMac: String?) {
-        pendingMac.value = targetMac?.trim().takeIf { !it.isNullOrEmpty() }
+        pendingMac = targetMac  // kom ihåg MAC tills callbacken kommer
 
-        val permissions = mutableListOf<String>()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissions += Manifest.permission.BLUETOOTH_SCAN
-            permissions += Manifest.permission.BLUETOOTH_CONNECT
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT
+            )
+        } else {
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
-        // Location hjälper scanning på många enheter, även nya
-        permissions += Manifest.permission.ACCESS_FINE_LOCATION
-
-        blePermissionLauncher.launch(permissions.toTypedArray())
+        blePermissionLauncher.launch(permissions)
     }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        drawerContent = { /* som du hade */ }
+        drawerContent = {
+            ModalDrawerSheet {
+                Text(
+                    text = "Recovery Sense",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(16.dp)
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("Hem") },
+                    selected = currentScreen is Screen.Home,
+                    onClick = { navigate(Screen.Home) }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Import") },
+                    selected = currentScreen is Screen.Import,
+                    onClick = { navigate(Screen.Import) }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Grafer") },
+                    selected = currentScreen is Screen.Graph,
+                    onClick = { navigate(Screen.Graph) }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Rekommendation") },
+                    selected = currentScreen is Screen.Recommendation,
+                    onClick = { navigate(Screen.Recommendation) }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Livepuls") },
+                    selected = currentScreen is Screen.Live,
+                    onClick = { navigate(Screen.Live) }
+                )
+            }
+        }
     ) {
         Scaffold(
             topBar = {
@@ -95,7 +129,10 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Meny")
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Meny"
+                            )
                         }
                     }
                 )
@@ -111,18 +148,24 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
                         onGoToLive = { navigate(Screen.Live) }
                     )
 
-                    is Screen.Import -> ImportScreen(viewModel = viewModel, state = state)
+                    is Screen.Import -> ImportScreen(
+                        viewModel = viewModel,
+                        state = state
+                    )
 
-                    is Screen.Graph -> GraphScreen(trainingDays = state.trainingDays)
+                    is Screen.Graph -> GraphScreen(
+                        trainingDays = state.trainingDays
+                    )
 
-                    is Screen.Recommendation ->
-                        RecommendationScreen(trainingDays = state.trainingDays)
+                    is Screen.Recommendation -> RecommendationScreen(
+                        trainingDays = state.trainingDays
+                    )
 
                     is Screen.Live -> LiveHeartRateScreen(
                         liveHeartRate = liveHr,
                         connectionState = connState,
                         connectionInfo = connInfo,
-                        onStartLive = { mac -> startLiveWithPermissions(mac) },
+                        onStartLive = { macOrNull -> startLiveWithPermissions(macOrNull) },
                         onStopLive = { viewModel.stopLiveHeartRate() }
                     )
                 }

@@ -13,7 +13,7 @@ fun LiveHeartRateScreen(
     liveHeartRate: Int?,
     connectionState: BleConnectionState,
     connectionInfo: String,
-    onStartLive: (String?) -> Unit,   // <-- tar MAC eller null
+    onStartLive: (String?) -> Unit,   // <-- tar ev. MAC
     onStopLive: () -> Unit
 ) {
     var macText by remember { mutableStateOf("") }
@@ -24,7 +24,7 @@ fun LiveHeartRateScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Connection-status
+        // Anslutning
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -67,14 +67,14 @@ fun LiveHeartRateScreen(
             }
         }
 
-        // MAC-fält
+        // Fält för MAC-adress (valfritt)
         OutlinedTextField(
             value = macText,
             onValueChange = { macText = it },
-            label = { Text("MAC-adress (valfri)") },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("MAC-adress (valfritt)") },
             placeholder = { Text("t.ex. A0:9E:1A:C4:45:8C") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            singleLine = true
         )
 
         Row(
@@ -84,9 +84,12 @@ fun LiveHeartRateScreen(
             Button(
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    android.util.Log.d("BleHR", "Start-knapp tryckt i LiveHeartRateScreen")
-                    val mac = macText.trim().takeIf { it.isNotEmpty() }
-                    onStartLive(mac)
+                    android.util.Log.d(
+                        "BleHR",
+                        "Start-knapp tryckt i LiveHeartRateScreen, mac='$macText'"
+                    )
+                    // Skicka null om fältet är tomt -> scan
+                    onStartLive(macText.ifBlank { null })
                 }
             ) {
                 Text("Starta")
