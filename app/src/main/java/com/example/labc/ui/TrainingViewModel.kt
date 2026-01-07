@@ -26,24 +26,19 @@ class TrainingViewModel(
 
     private val bleManager = BleHeartRateManager(appContext)
 
-    // BLE-status till UI
     val bleConnectionState = bleManager.connectionState
     val bleConnectionInfo = bleManager.connectionInfo
 
-    // Livepuls till UI
     val liveHeartRate: StateFlow<Int?> = bleManager.heartRate
 
-    // UI-state för alla pass
     private val _uiState = MutableStateFlow(TrainingUiState(isLoading = true))
     val uiState: StateFlow<TrainingUiState> = _uiState.asStateFlow()
 
-    // --- Livepass-inspelning ---
     private val liveSessionSamples = mutableListOf<HeartRateSample>()
     private var liveSessionStartTime: Long? = null
     private var isRecordingLiveSession: Boolean = false
 
     init {
-        // Spara samples när vi spelar in
         viewModelScope.launch {
             liveHeartRate.collect { hr ->
                 if (hr != null && isRecordingLiveSession) {
@@ -59,7 +54,6 @@ class TrainingViewModel(
         }
     }
 
-    // --- Ladda alla pass ---
     fun loadData() {
         viewModelScope.launch {
             try {
@@ -78,7 +72,6 @@ class TrainingViewModel(
         }
     }
 
-    // --- Import från fil ---
     fun importFromUri(uri: Uri) {
         viewModelScope.launch {
             try {
@@ -96,7 +89,6 @@ class TrainingViewModel(
         }
     }
 
-    // --- Livepass: starta (med ev. MAC) ---
     fun startLiveSession(targetMac: String?) {
         android.util.Log.d(
             "BleHR",
@@ -116,7 +108,6 @@ class TrainingViewModel(
         }
     }
 
-    // --- Livepass: stoppa & spara ---
     fun stopLiveSessionAndSave() {
         isRecordingLiveSession = false
         bleManager.disconnect()
@@ -153,7 +144,6 @@ class TrainingViewModel(
         }
     }
 
-    // Används från UI
     fun startLiveHeartRate(targetMac: String?) {
         android.util.Log.d("BleHR", "ViewModel.startLiveHeartRate(mac=$targetMac) alias called")
         startLiveSession(targetMac)

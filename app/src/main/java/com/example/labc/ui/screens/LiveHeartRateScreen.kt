@@ -13,7 +13,7 @@ fun LiveHeartRateScreen(
     liveHeartRate: Int?,
     connectionState: BleConnectionState,
     connectionInfo: String,
-    onStartLive: (String?) -> Unit,   // <-- tar ev. MAC
+    onStartLive: (String?) -> Unit,
     onStopLive: () -> Unit
 ) {
     var macText by remember { mutableStateOf("") }
@@ -24,7 +24,6 @@ fun LiveHeartRateScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Anslutning
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -45,7 +44,6 @@ fun LiveHeartRateScreen(
             }
         }
 
-        // Livepuls
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -67,7 +65,6 @@ fun LiveHeartRateScreen(
             }
         }
 
-        // Fält för MAC-adress (valfritt)
         OutlinedTextField(
             value = macText,
             onValueChange = { macText = it },

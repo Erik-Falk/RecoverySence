@@ -59,8 +59,6 @@ fun RecommendationScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // (valfritt) Visa några siffror du kan prata om:
-        // t.ex. senaste veckans medel, antal hårda dagar osv
         Text(
             text = "Obs: Rekommendationen är ett stöd, inte en medicinsk bedömning. Känn efter själv också.",
             style = MaterialTheme.typography.bodySmall,

@@ -31,7 +31,6 @@ fun computeRecommendation(trainingDays: List<TrainingDay>): TrainingRecommendati
     val lastDay = last7.last()
     val lastDayScore = lastDay.trainingScore ?: 0.0
 
-    // Få pass totalt → ta det lugnt och samla data
     if (daysWithScore.size < 3) {
         return TrainingRecommendation(
             intensity = SessionIntensity.EASY,
@@ -40,7 +39,6 @@ fun computeRecommendation(trainingDays: List<TrainingDay>): TrainingRecommendati
         )
     }
 
-    // Många hårda dagar + tydligt hög belastning
     if (hardDays7 >= 3 && ratio >= 1.3) {
         return TrainingRecommendation(
             intensity = SessionIntensity.REST,
@@ -49,7 +47,6 @@ fun computeRecommendation(trainingDays: List<TrainingDay>): TrainingRecommendati
         )
     }
 
-    // Hög belastning, men inte extrem
     if (hardDays7 >= 2 || ratio in 1.1..1.3) {
         return TrainingRecommendation(
             intensity = SessionIntensity.EASY,
@@ -58,9 +55,7 @@ fun computeRecommendation(trainingDays: List<TrainingDay>): TrainingRecommendati
         )
     }
 
-    // Stabil belastning
     if (ratio in 0.8..1.1 && hardDays7 <= 1) {
-        // Om senaste passet var väldigt hårt – styr ändå mot lätt/medium
         return if (lastDayScore >= hardThreshold) {
             TrainingRecommendation(
                 intensity = SessionIntensity.EASY,
@@ -76,9 +71,7 @@ fun computeRecommendation(trainingDays: List<TrainingDay>): TrainingRecommendati
         }
     }
 
-    // Underbelastning: du har tränat mindre än du brukar
     if (ratio < 0.8 && chronicAvg > 0.0) {
-        // Men om senaste passet var hårt, gå inte direkt på ännu ett hårt
         return if (lastDayScore >= hardThreshold) {
             TrainingRecommendation(
                 intensity = SessionIntensity.MODERATE,
@@ -94,7 +87,6 @@ fun computeRecommendation(trainingDays: List<TrainingDay>): TrainingRecommendati
         }
     }
 
-    // Fallback – om inget annat träffade
     return TrainingRecommendation(
         intensity = SessionIntensity.MODERATE,
         title = "Normalt träningspass",

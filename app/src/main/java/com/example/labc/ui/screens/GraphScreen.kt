@@ -43,7 +43,6 @@ fun GraphScreen(
 
     var startIndex by remember { mutableStateOf(0) }
 
-    // hoppa alltid till senaste 7 när mängden data förändras
     LaunchedEffect(sortedDays.size) {
         startIndex = (sortedDays.size - windowSize).coerceAtLeast(0)
     }
@@ -55,7 +54,6 @@ fun GraphScreen(
     val scores = windowDays.map { it.trainingScore ?: 0.0 }
     val maxScore = scores.maxOrNull() ?: 0.0
 
-    // gör skalan "rund": 0–10–20–30 osv
     val tickStep = when {
         maxScore <= 50 -> 10.0
         maxScore <= 100 -> 20.0
@@ -98,7 +96,6 @@ fun GraphScreen(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // knappar för att bläddra mellan fönster
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -162,7 +159,6 @@ fun GraphScreen(
                 val fullWidth = size.width
                 val fullHeight = size.height
 
-                // lämna plats för y-axel till vänster + lite padding
                 val leftPadding = 48f
                 val topPadding = 8f
                 val bottomPadding = 24f
@@ -173,7 +169,6 @@ fun GraphScreen(
                 val gridColor = Color.White.copy(alpha = 0.25f)
                 val lineColor = Color(0xFF4CAF50) // grön linje
 
-                // --- Y-AXEL + horisontella gridlinjer + etiketter ---
                 val maxTickInt = topTick.toInt()
                 val stepInt = tickStep.toInt().coerceAtLeast(1)
 
@@ -181,7 +176,6 @@ fun GraphScreen(
                     val ratio = value / maxValueForScale.toFloat() // 0–1
                     val y = topPadding + chartHeight * (1f - ratio)
 
-                    // gridlinje
                     drawLine(
                         color = gridColor,
                         start = Offset(leftPadding, y),
@@ -189,7 +183,6 @@ fun GraphScreen(
                         strokeWidth = 1f
                     )
 
-                    // etikett (ritas lite till vänster om y-axeln)
                     drawContext.canvas.nativeCanvas.drawText(
                         value.toString(),
                         leftPadding - 8f,
@@ -198,7 +191,6 @@ fun GraphScreen(
                     )
                 }
 
-                // y-axel
                 drawLine(
                     color = gridColor,
                     start = Offset(leftPadding, topPadding),
@@ -206,7 +198,6 @@ fun GraphScreen(
                     strokeWidth = 2f
                 )
 
-                // --- Vertikala gridlinjer (en per pass i fönstret) ---
                 val xStep = if (scores.size == 1) 0f else chartWidth / (scores.size - 1)
                 for (i in scores.indices) {
                     val x = if (scores.size == 1)
@@ -222,7 +213,6 @@ fun GraphScreen(
                     )
                 }
 
-                // --- Punktpositioner ---
                 val positions = mutableListOf<Offset>()
                 scores.forEachIndexed { index, score ->
                     val x = if (scores.size == 1)
@@ -237,7 +227,6 @@ fun GraphScreen(
                 }
                 pointPositions = positions
 
-                // --- grön linje ---
                 for (i in 0 until positions.size - 1) {
                     drawLine(
                         color = lineColor,
@@ -247,7 +236,6 @@ fun GraphScreen(
                     )
                 }
 
-                // --- punkter ---
                 positions.forEachIndexed { index, offset ->
                     val day = windowDays[index]
                     val radius = if (day == selectedDay) 10f else 6f
@@ -262,7 +250,6 @@ fun GraphScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // info om vald punkt
         val selectedText = selectedDay?.let { day ->
             val score = day.trainingScore ?: 0.0
             "Valt pass: ${day.date}, score ${"%.1f".format(score)}"
@@ -275,7 +262,6 @@ fun GraphScreen(
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        // Tidslinje under grafen – etiketter för de pass som finns i fönstret
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -288,7 +274,7 @@ fun GraphScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = day.date, // korta ev. till day.date.takeLast(5)
+                        text = day.date,
                         style = MaterialTheme.typography.labelSmall,
                         color = colors.onBackground.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center

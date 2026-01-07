@@ -58,9 +58,7 @@ class BleHeartRateManager(private val context: Context) {
     private val _connectionInfo = MutableStateFlow("Inte ansluten")
     val connectionInfo: StateFlow<String> = _connectionInfo.asStateFlow()
 
-    // -------- Public API --------
 
-    /** Vanlig scanning efter Polar-enheter (ingen MAC-filtrering). */
     @SuppressLint("MissingPermission")
     fun startScan() {
         Log.d(tag, "startScan() called")
@@ -86,12 +84,10 @@ class BleHeartRateManager(private val context: Context) {
         _connectionInfo.value = "Söker efter pulssensor..."
         isScanning = true
 
-        // ingen filter-lista = se alla enheter
         scanner?.startScan(null, settings, scanCallback)
         Log.d(tag, "Scanning started (filters=false)")
     }
 
-    /** Direktanslut till en given MAC-adress (används när användaren skriver in adressen). */
     @SuppressLint("MissingPermission")
     fun connectDirect(mac: String) {
         Log.d(tag, "connectDirect($mac)")
@@ -103,7 +99,6 @@ class BleHeartRateManager(private val context: Context) {
             return
         }
 
-        // stoppa eventuell pågående scan
         stopScanInternal()
 
         val device = try {
@@ -140,7 +135,6 @@ class BleHeartRateManager(private val context: Context) {
         _connectionInfo.value = "Frånkopplad"
     }
 
-    // -------- ScanCallback --------
 
     @SuppressLint("MissingPermission")
     private val scanCallback = object : ScanCallback() {
@@ -158,7 +152,6 @@ class BleHeartRateManager(private val context: Context) {
                         "addr=${device.address} rssi=${result.rssi}"
             )
 
-            // enkel filtrering: bara enheter som heter något med "Polar"
             if (!name.contains("polar", ignoreCase = true)) return
 
             Log.d(tag, "Found Polar-like device: $name, connecting...")
@@ -194,7 +187,6 @@ class BleHeartRateManager(private val context: Context) {
         Log.d(tag, "Scanning stopped")
     }
 
-    // -------- GATT callback --------
 
     @SuppressLint("MissingPermission")
     private val gattCallback = object : BluetoothGattCallback() {
@@ -280,7 +272,7 @@ class BleHeartRateManager(private val context: Context) {
             }
         }
 
-        // Ny overload (Android 13+)
+
         override fun onCharacteristicChanged(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic,
@@ -292,7 +284,6 @@ class BleHeartRateManager(private val context: Context) {
             if (hr != null && hr > 0) _heartRate.value = hr
         }
 
-        // Äldre overload – vidarebefordrar bara
         override fun onCharacteristicChanged(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic

@@ -2,6 +2,8 @@ package com.example.labc.data.parsers
 
 import com.example.labc.data.model.HeartRateSample
 
+// ANvänds inte för närvarande
+
 object PolarCsvParser {
 
     fun parse(lines: List<String>): List<HeartRateSample> {
@@ -10,7 +12,7 @@ object PolarCsvParser {
         val result = mutableListOf<HeartRateSample>()
 
         for ((index, line) in lines.withIndex()) {
-            if (index == 0) continue  // hoppa header
+            if (index == 0) continue
             if (line.isBlank()) continue
 
             val parts = line.split(",", ";")

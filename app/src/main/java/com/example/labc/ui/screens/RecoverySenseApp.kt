@@ -37,7 +37,6 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
         scope.launch { drawerState.close() }
     }
 
-    // ---- BLE permissions + "pending" MAC ----
     var pendingMac by remember { mutableStateOf<String?>(null) }
 
     val blePermissionLauncher = rememberLauncherForActivityResult(
@@ -62,7 +61,7 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
     }
 
     fun startLiveWithPermissions(targetMac: String?) {
-        pendingMac = targetMac  // kom ihåg MAC tills callbacken kommer
+        pendingMac = targetMac
 
         val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(

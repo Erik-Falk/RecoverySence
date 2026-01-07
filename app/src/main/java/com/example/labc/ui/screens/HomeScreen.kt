@@ -42,7 +42,6 @@ fun HomeScreen(
             Spacer(Modifier.height(12.dp))
         }
 
-        // 🔹 Livepuls
         HomeActionButton(
             title = "Livepuls",
             subtitle = "Se puls i realtid från din sensor",

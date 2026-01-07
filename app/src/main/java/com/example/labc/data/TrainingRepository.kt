@@ -28,7 +28,7 @@ class TrainingRepository(
         return fromDb.map { it.toDomain() }
     }
 
-    // --- Importera Polar JSON-fil -> spara i DB ---
+    // Importera Polar JSON-fil spara i DB
 
     suspend fun importFromUri(uri: Uri, appContext: Context) {
         val inputStream = appContext.contentResolver.openInputStream(uri)
@@ -42,14 +42,14 @@ class TrainingRepository(
         val risk = calculateRiskLevel(score)
 
         val sessionEntity = TrainingSessionEntity(
-            date = workout.date,          // t.ex. "2024-11-16"
+            date = workout.date,
             trainingScore = score,
-            riskLevel = risk.name         // "GREEN", "YELLOW", "RED"
+            riskLevel = risk.name
         )
 
         val sampleEntities = workout.samples.map { s ->
             HeartRateSampleEntity(
-                sessionId = 0,             // sätts i DAO vid insertSessionWithSamples
+                sessionId = 0,
                 timestamp = s.timestamp,
                 heartRate = s.heartRate
             )
@@ -58,7 +58,6 @@ class TrainingRepository(
         dao.insertSessionWithSamples(sessionEntity, sampleEntities)
     }
 
-    // --- NY: Spara ett livepass som TrainingSession + samples ---
 
     suspend fun saveLiveSession(
         samples: List<HeartRateSample>,
@@ -66,26 +65,21 @@ class TrainingRepository(
     ) {
         if (samples.isEmpty()) return
 
-        // 1) Gör ett datum från startTimeMillis (lokal tidzon)
         val localDate = Instant.ofEpochMilli(startTimeMillis)
             .atZone(ZoneId.systemDefault())
             .toLocalDate()
-        val dateString = localDate.toString()   // t.ex. "2025-01-03"
+        val dateString = localDate.toString()
 
-        // 2) Beräkna samma score som för importerade pass
         val score = calculateTrainingScore(samples)
 
-        // 3) Risknivå med din befintliga enkla logik
         val risk = calculateRiskLevel(score)
 
-        // 4) Bygg en TrainingSessionEntity
         val sessionEntity = TrainingSessionEntity(
             date = dateString,
             trainingScore = score,
             riskLevel = risk.name
         )
 
-        // 5) Mappa HeartRateSample -> HeartRateSampleEntity
         val sampleEntities = samples.map { s ->
             HeartRateSampleEntity(
                 sessionId = 0,            // sätts i DAO
@@ -94,11 +88,8 @@ class TrainingRepository(
             )
         }
 
-        // 6) Spara allt i databasen i en transaktion
         dao.insertSessionWithSamples(sessionEntity, sampleEntities)
     }
-
-    // ---- Analys-metoder som du redan använder ----
 
     private fun calculateTrainingScore(samples: List<HeartRateSample>): Double {
         if (samples.isEmpty()) return 0.0
@@ -111,7 +102,6 @@ class TrainingRepository(
 
         if (durationMinutes <= 0) return 0.0
 
-        // enkel modell: längre + högre puls -> högre score
         return durationMinutes * (avgHr / 100.0)
     }
 
@@ -123,8 +113,6 @@ class TrainingRepository(
         }
     }
 }
-
-// ---- Mapping från DB-modeller till domänklasser ----
 
 private fun TrainingDayWithSamples.toDomain(): TrainingDay {
     val risk = when (session.riskLevel) {
