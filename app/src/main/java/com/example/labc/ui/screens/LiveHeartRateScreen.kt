@@ -2,7 +2,7 @@ package com.example.labc.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -13,9 +13,11 @@ fun LiveHeartRateScreen(
     liveHeartRate: Int?,
     connectionState: BleConnectionState,
     connectionInfo: String,
-    onStartLive: () -> Unit,
+    onStartLive: (String?) -> Unit,
     onStopLive: () -> Unit
 ) {
+    var macText by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -78,6 +80,21 @@ fun LiveHeartRateScreen(
             }
         }
 
+        // Fält för MAC-adress
+        OutlinedTextField(
+            value = macText,
+            onValueChange = { macText = it },
+            label = { Text("MAC-adress (valfritt)") },
+            placeholder = { Text("t.ex. A0:9E:1A:C4:45:8C") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            text = "Lämna tomt för att söka efter närmaste Polar-sensor.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
         Spacer(Modifier.height(8.dp))
 
         Row(
@@ -88,7 +105,8 @@ fun LiveHeartRateScreen(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     android.util.Log.d("BleHR", "Start-knapp tryckt i LiveHeartRateScreen")
-                    onStartLive()
+                    val macOrNull = macText.trim().ifBlank { null }
+                    onStartLive(macOrNull)
                 }
             ) {
                 Text("Starta")

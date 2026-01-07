@@ -24,28 +24,21 @@ class TrainingViewModel(
     private val appContext: Context
 ) : ViewModel() {
 
-    // BLE-manager
     private val bleManager = BleHeartRateManager(appContext)
 
-    // Exponera BLE-status till UI
     val bleConnectionState = bleManager.connectionState
     val bleConnectionInfo = bleManager.connectionInfo
 
-    // Exponera livepuls till UI
     val liveHeartRate: StateFlow<Int?> = bleManager.heartRate
 
-    // UI-state för resten av appen (alla pass)
     private val _uiState = MutableStateFlow(TrainingUiState(isLoading = true))
     val uiState: StateFlow<TrainingUiState> = _uiState.asStateFlow()
-
-    // --- Livepass-inspelning ---
 
     private val liveSessionSamples = mutableListOf<HeartRateSample>()
     private var liveSessionStartTime: Long? = null
     private var isRecordingLiveSession: Boolean = false
 
     init {
-        // Lyssna på liveHeartRate och spara samples när vi spelar in
         viewModelScope.launch {
             liveHeartRate.collect { hr ->
                 if (hr != null && isRecordingLiveSession) {
@@ -60,8 +53,6 @@ class TrainingViewModel(
             }
         }
     }
-
-    // --- Ladda alla pass från DB ---
 
     fun loadData() {
         viewModelScope.launch {
@@ -80,8 +71,6 @@ class TrainingViewModel(
             }
         }
     }
-
-    // --- Import från fil (Polar JSON) ---
 
     fun importFromUri(uri: Uri) {
         viewModelScope.launch {
@@ -102,17 +91,15 @@ class TrainingViewModel(
 
     // --- Livepass: starta inspelning + BLE ---
 
-    fun startLiveSession() {
-        android.util.Log.d("BleHR", "ViewModel.startLiveSession() called")
+    fun startLiveSession(targetMac: String?) {
+        android.util.Log.d("BleHR", "ViewModel.startLiveSession(targetMac=$targetMac)")
 
         liveSessionSamples.clear()
         liveSessionStartTime = System.currentTimeMillis()
         isRecordingLiveSession = true
 
-        bleManager.connectDirect("A0:9E:1A:C4:45:8C")
+        bleManager.startScan(targetMac)
     }
-
-    // --- Livepass: stoppa och spara som träningspass ---
 
     fun stopLiveSessionAndSave() {
         isRecordingLiveSession = false
@@ -150,11 +137,11 @@ class TrainingViewModel(
         }
     }
 
-    // “Bekväma” alias som du använder i UI
-    fun startLiveHeartRate() {
-        android.util.Log.d("BleHR", "ViewModel.startLiveHeartRate() alias called")
-        startLiveSession()
+    fun startLiveHeartRate(mac: String?) {
+        android.util.Log.d("BleHR", "ViewModel.startLiveHeartRate(mac=$mac) alias called")
+        startLiveSession(mac)
     }
+
     fun stopLiveHeartRate() = stopLiveSessionAndSave()
 
     override fun onCleared() {

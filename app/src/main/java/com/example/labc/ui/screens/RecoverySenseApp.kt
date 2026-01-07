@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import com.example.labc.ui.TrainingViewModel
 import kotlinx.coroutines.launch
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecoverySenseApp(viewModel: TrainingViewModel) {
@@ -40,6 +39,9 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
         scope.launch { drawerState.close() }
     }
 
+    // ---- BLE: kom ihåg MAC som användaren vill använda ----
+    var pendingLiveMac by remember { mutableStateOf<String?>(null) }
+
     // ---- BLE permissions ----
     val blePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -55,14 +57,18 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
             }
 
         if (canScan) {
-            Log.d("BleHR", "Rätt BLE-permissioner – startar scan")
-            viewModel.startLiveHeartRate()
+            Log.d("BleHR", "Rätt BLE-permissioner – startar scan (mac=$pendingLiveMac)")
+            // <-- NYTT: vi skickar med MAC (kan vara null)
+            viewModel.startLiveHeartRate(pendingLiveMac)
         } else {
             Log.d("BleHR", "Permission nekad, startar INTE scan")
         }
     }
 
-    fun startLiveWithPermissions() {
+    fun startLiveWithPermissions(mac: String?) {
+        // spara den MAC användaren valt (eller null om tomt fält)
+        pendingLiveMac = mac
+
         val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
                 Manifest.permission.BLUETOOTH_SCAN,
@@ -164,7 +170,8 @@ fun RecoverySenseApp(viewModel: TrainingViewModel) {
                         liveHeartRate = liveHr,
                         connectionState = connState,
                         connectionInfo = connInfo,
-                        onStartLive = { startLiveWithPermissions() },
+                        // <-- NYTT: vi tar emot mac från skärmen
+                        onStartLive = { mac -> startLiveWithPermissions(mac) },
                         onStopLive = { viewModel.stopLiveHeartRate() }
                     )
                 }

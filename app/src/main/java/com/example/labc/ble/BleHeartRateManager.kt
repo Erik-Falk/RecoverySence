@@ -1,6 +1,5 @@
 package com.example.labc.ble
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.le.BluetoothLeScanner
@@ -9,22 +8,11 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
-import android.os.ParcelUuid
 import android.util.Log
-import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
-
-/**
- * En enkel BLE-manager för att läsa Heart Rate Service (HRS) från t.ex. Polar Verity Sense.
- *
- * Används så här:
- *  - Skapa en instans i ViewModel: val bleManager = BleHeartRateManager(appContext)
- *  - startScan() när permissions är godkända
- *  - lyssna på heartRate / connectionState i UI via StateFlow
- */
 
 enum class BleConnectionState {
     Idle,
@@ -54,6 +42,9 @@ class BleHeartRateManager(private val context: Context) {
     private var currentGatt: BluetoothGatt? = null
     private var isScanning = false
 
+    // senaste MAC vi letar efter (om någon)
+    private var targetMacForScan: String? = null
+
     private val _heartRate = MutableStateFlow<Int?>(null)
     val heartRate: StateFlow<Int?> = _heartRate.asStateFlow()
 
@@ -65,11 +56,16 @@ class BleHeartRateManager(private val context: Context) {
 
     // -------- Public API --------
 
+    /**
+     * Starta scanning.
+     * @param targetMac Om satt -> försök hitta JUST den MAC:en.
+     *                  Om null/blank -> leta efter första Polar-enhet.
+     */
     @SuppressLint("MissingPermission")
-    fun startScan() {
-        Log.d(tag, "startScan() called")
-
+    fun startScan(targetMac: String? = null) {
         val adapter = bluetoothAdapter
+        Log.d(tag, "startScan(targetMac=$targetMac), adapterEnabled=${adapter?.isEnabled}")
+
         if (adapter == null || !adapter.isEnabled) {
             Log.w(tag, "Bluetooth är inte påslaget")
             _connectionState.value = BleConnectionState.Error
@@ -77,19 +73,37 @@ class BleHeartRateManager(private val context: Context) {
             return
         }
 
-        if (isScanning) return
+        if (isScanning) {
+            Log.d(tag, "Redan i scanning, ignorerar startScan")
+            return
+        }
+
+        val cleanedMac = targetMac?.trim()?.takeIf { it.isNotEmpty() }
+        targetMacForScan = cleanedMac?.uppercase()
 
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
 
-        val filter = ScanFilter.Builder()
-            .setDeviceAddress("A0:9E:1A:C4:45:8C") // <-- replace with YOUR Polar address
-            .build()
+        // Om vi har en MAC -> använd ScanFilter på adress
+        val filters: List<ScanFilter>? = cleanedMac?.let {
+            listOf(
+                ScanFilter.Builder()
+                    .setDeviceAddress(it)
+                    .build()
+            )
+        }
 
-        val leScanner = bluetoothAdapter?.bluetoothLeScanner
-        leScanner?.startScan(listOf(filter), settings, scanCallback)
-        Log.d(tag, "Scanning started (address filter)")
+        isScanning = true
+        _connectionState.value = BleConnectionState.Scanning
+        _connectionInfo.value = if (targetMacForScan != null) {
+            "Söker efter sensor med MAC $targetMacForScan…"
+        } else {
+            "Söker efter pulssensor…"
+        }
+
+        scanner?.startScan(filters, settings, scanCallback)
+        Log.d(tag, "Scanning started (filters=${filters != null})")
     }
 
     @SuppressLint("MissingPermission")
@@ -106,7 +120,7 @@ class BleHeartRateManager(private val context: Context) {
         _connectionInfo.value = "Frånkopplad"
     }
 
-    // -------- ScanCallback (THIS is the only onScanResult that matters) --------
+    // -------- ScanCallback --------
 
     @SuppressLint("MissingPermission")
     private val scanCallback = object : ScanCallback() {
@@ -116,19 +130,32 @@ class BleHeartRateManager(private val context: Context) {
             val advName = result.scanRecord?.deviceName
             val devName = device.name
             val name = advName ?: devName ?: "okänd"
+            val addr = device.address
 
-            Log.d(tag, "SCAN HIT: name=$name devName=$devName advName=$advName addr=${device.address} rssi=${result.rssi}")
+            Log.d(
+                tag,
+                "SCAN HIT: name=$name devName=$devName advName=$advName addr=$addr rssi=${result.rssi}"
+            )
 
-            Log.d(tag, "scan: name=$name devName=$devName advName=$advName addr=${device.address} rssi=${result.rssi}")
+            val macTarget = targetMacForScan
+            if (macTarget != null) {
+                // Vi letar specifikt efter denna MAC
+                if (!addr.equals(macTarget, ignoreCase = true)) {
+                    return
+                }
+            } else {
+                // Ingen MAC angiven -> bara ta Polar-enheter
+                val anyName = name
+                if (!anyName.contains("polar", ignoreCase = true)) {
+                    return
+                }
+            }
 
-            // Safer filter: Polar devices often advertise "Polar ..."
-            if (!name.contains("polar", ignoreCase = true)) return
-
-            Log.d(tag, "Found Polar-like device: $name, connecting...")
+            Log.d(tag, "Väljer enhet: $name ($addr), försöker ansluta…")
             stopScanInternal()
 
             _connectionState.value = BleConnectionState.Connecting
-            _connectionInfo.value = "Hittade: $name – ansluter..."
+            _connectionInfo.value = "Hittade: $name – ansluter…"
 
             currentGatt = device.connectGatt(
                 context,
@@ -149,6 +176,7 @@ class BleHeartRateManager(private val context: Context) {
         override fun onScanFailed(errorCode: Int) {
             Log.e(tag, "onScanFailed: $errorCode")
             isScanning = false
+            targetMacForScan = null
             _connectionState.value = BleConnectionState.Error
             _connectionInfo.value = "Scanning misslyckades (kod $errorCode)"
         }
@@ -161,6 +189,7 @@ class BleHeartRateManager(private val context: Context) {
             scanner?.stopScan(scanCallback)
         } catch (_: Exception) { }
         isScanning = false
+        targetMacForScan = null
         Log.d(tag, "Scanning stopped")
     }
 
@@ -182,7 +211,7 @@ class BleHeartRateManager(private val context: Context) {
 
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
-                    _connectionInfo.value = "Ansluten, hämtar tjänster..."
+                    _connectionInfo.value = "Ansluten, hämtar tjänster…"
                     Log.d(tag, "Connected -> discoverServices()")
                     gatt.discoverServices()
                 }
@@ -228,7 +257,11 @@ class BleHeartRateManager(private val context: Context) {
             Log.d(tag, "writeDescriptor(CCCD) started=$started")
         }
 
-        override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+        override fun onDescriptorWrite(
+            gatt: BluetoothGatt,
+            descriptor: BluetoothGattDescriptor,
+            status: Int
+        ) {
             Log.d(tag, "onDescriptorWrite uuid=${descriptor.uuid} status=$status")
             if (descriptor.uuid == CLIENT_CHARACTERISTIC_CONFIG_UUID && status == BluetoothGatt.GATT_SUCCESS) {
                 _connectionState.value = BleConnectionState.Connected
@@ -239,16 +272,23 @@ class BleHeartRateManager(private val context: Context) {
             }
         }
 
-        // New overload (Android 13+ friendly)
-        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+        // Ny overload (Android 13+)
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray
+        ) {
             if (characteristic.uuid != HEART_RATE_MEAS_CHAR_UUID) return
             val hr = parseHeartRate(value)
             Log.d(tag, "HR notify: hr=$hr bytes=${value.joinToString { "%02X".format(it) }}")
             if (hr != null && hr > 0) _heartRate.value = hr
         }
 
-        // Old overload forwarder (compat)
-        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        // Gammal overload (kompat)
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic
+        ) {
             val value = characteristic.value ?: return
             onCharacteristicChanged(gatt, characteristic, value)
         }
@@ -266,30 +306,5 @@ class BleHeartRateManager(private val context: Context) {
             val hi = value.getOrNull(2)?.toInt()?.and(0xFF) ?: return null
             (hi shl 8) or lo
         }
-    }
-
-    @SuppressLint("MissingPermission")
-    fun connectDirect(mac: String) {
-        Log.d(tag, "connectDirect($mac)")
-
-        val adapter = bluetoothAdapter
-        if (adapter == null || !adapter.isEnabled) {
-            _connectionState.value = BleConnectionState.Error
-            _connectionInfo.value = "Bluetooth är inte aktiverat"
-            return
-        }
-
-        stopScanInternal()
-
-        val device = adapter.getRemoteDevice(mac)
-        _connectionState.value = BleConnectionState.Connecting
-        _connectionInfo.value = "Ansluter direkt till $mac..."
-
-        currentGatt = device.connectGatt(
-            context,
-            false,
-            gattCallback,
-            BluetoothDevice.TRANSPORT_LE
-        )
     }
 }
